@@ -214,40 +214,128 @@ nlp.stem = function(str) {
   var basic;
   for(i=0; i<w.length; i++){
     //mencari dalam kamus, jika ketemu termasuk dalam kata dasar
-    if(! nlp.inDict(w[i], out)){
+    basic = nlp.inDict(w[i], out);
+
+    if(basic == false){
       //menghapus akhiran pun, kah, lah, ku, mu dan nya
       basic = nlp.match(w[i], ['','','pun|kah|lah|ku|mu|nya']);
       if(basic !== false){
-        if(! nlp.inDict(basic, out)){
+        if(nlp.inDict(basic, out) === false){
           //menghapus akhiran ku, mu dan nya
-          nlp.inDict(nlp.match(basic, ['','','ku|mu|nya']), out)
-        }
-      }
-      
-      //neghapus awalan ber
-      basic = nlp.match(w[i], ['ber','','']);
-      if(basic){
-        if(! nlp.inDict(basic, out)){
-          //menghapus akhiran an
-          nlp.inDict(nlp.match(basic, ['','','an'], 1), out);
+          basic = nlp.match(basic, ['','','ku|mu|nya']);
+          if(basic !== false){
+            nlp.inDict(basic, out)
+          }
         }
       }
 
-      //menghapusn awalan per, ke dan akhira an
-      nlp.inDict(nlp.match(w[i], ['per|ke|pen','','an']), out);
+      if(basic === false){
+        basic = nlp.match(w[i], ['memper|diper','','']);
+        //neghapus awalan ber
+        if(basic !== false){
+          if(nlp.inDict(basic, out) === false){
+            //menghapus akhiran an
+            basic = nlp.match(basic, ['','','kan|i']);
+            if(basic !== false){
+              if(nlp.inDict(basic, out) === false){
+                basic = nlp.match(basic, ['','el|er','']);
+              }
+            }
+          }
+        }
+      }
+
+      if(basic === false){
+        //neghapus awalan ber
+        basic = nlp.match(w[i], ['ber|me|di|pen|per','','']);
+        if(basic !== false){
+          if(nlp.inDict(basic, out) === false){
+            //menghapus akhiran an
+            basic = nlp.match(basic, ['','','an|kan|i']);
+            if(basic !== false){
+              if(nlp.inDict(basic, out) === false){
+                basic = nlp.match(basic, ['','el|er','']);
+                if(basic !== false){
+                  basic = nlp.inDict(basic, out);
+                }
+              }
+            }
+          }
+        }
+      }
       
-      //menghapusn awalan memper, mempe, diper  dan akhiran kan, i
-      nlp.inDict(nlp.match(w[i], ['memper|mempe|diper','','kan|i']), out);
-      
-      //menghapusn awalan me, di
-      nlp.inDict(nlp.match(w[i], ['me|di','','']), out);
-      
-      //menghapusn awalan me, di  dan akhiran kan, i
-      nlp.inDict(nlp.match(w[i], ['me|di','','kan|i']), out);
-      //menghapusn awalan meng  dan mengganti dengan konsonan k
-      nlp.inDict(nlp.match(w[i], ['meng','','i|kan'], 'k'), out);
-      //menghapusn awalan meny  dan mengganti dengan konsonan s
-      nlp.inDict(nlp.match(w[i], ['meny','el','i|kan'], 's'), out);
+      if(basic === false){
+        //neghapus awalan ber
+        basic = nlp.match(w[i], ['pe','','']);
+        if(basic !== false){
+          if(nlp.inDict(basic, out) === false){
+            //menghapus akhiran an
+            basic = nlp.match(basic, ['','','an|kan|i']);
+            if(basic !== false){
+              if(nlp.inDict(basic, out) === false){
+                basic = nlp.match(basic, ['','el|er','']);
+                if(basic !== false){
+                  basic = nlp.inDict(basic, out);
+                }
+              }
+            }
+          }
+        }
+      }
+
+
+      if(basic === false){
+        basic = nlp.match(w[i], ['menge|mempe','','']);
+        //neghapus awalan ber
+        if(basic !== false){
+          if(nlp.inDict(basic, out) === false){
+            //menghapus akhiran an
+            basic = nlp.match(basic, ['','','kan']);
+            if(basic !== false){
+              if(nlp.inDict(basic, out) === false){
+                basic = nlp.match(basic, ['','el|er','']);
+              }
+            }
+          }
+        }
+      }
+
+      if(basic === false){
+        basic = nlp.match(w[i], ['meng','',''],'k');
+        //neghapus awalan ber
+        if(basic !== false){
+          if(nlp.inDict(basic, out) === false){
+            //menghapus akhiran an
+            basic = nlp.match(basic, ['','','kan|i']);
+            if(basic !== false){
+              if(nlp.inDict(basic, out) === false){
+                basic = nlp.match(basic, ['','el|er','']);
+              }
+            }
+          }
+        }
+      }
+
+      if(basic === false){
+        basic = nlp.match(w[i], ['meny','',''],'s');
+        //neghapus awalan ber
+        if(basic !== false){
+          if(nlp.inDict(basic, out) === false){
+            //menghapus akhiran an
+            basic = nlp.match(basic, ['','','kan|i']);
+            if(basic !== false){
+              if(nlp.inDict(basic, out) === false){
+                basic = nlp.match(basic, ['','el|er','']);
+              }
+            }
+          }
+        }
+      }
+
+      if(basic === false){
+        //diasumsikan kosa kata baru
+        out.push(w[i])
+      }
     }
     
   }
@@ -256,7 +344,7 @@ nlp.stem = function(str) {
 
 nlp.words = require('./words.js');
 nlp.stopWords = require('./stopWords.js');
-var s = 'mempertemukan memperbarui menyelisihi mengelabui memakan mengesampingkan  diperbarui mempekerjakan dalam pencarian pertemuan bersamaan hatikupun yang sulit bagaimanapun juga itu adalah pencarian yang sulit';
+var s = 'mempertemukan memperbarui makron menyelisihi mengelabui memakan mengesampingkan  diperbarui mempekerjakan dalam pencarian pertemuan bersamaan hatikupun yang sulit bagaimanapun juga itu adalah pencarian yang sulit';
 console.log('kalimat asli')
 console.log(s);
 console.log('hasil stemming')
