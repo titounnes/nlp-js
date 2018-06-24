@@ -4,22 +4,6 @@ nlp.text = 'Pada bagian ini mahasiswa diminta untuk memaparkan latar belakang me
   'Pada bagian ini mahasiswa diminta untuk menjelaskan tujuan dari penelitian. Tujuan penelitian haruslah merupakan jawaban sementara atas masalah yang ingin dipecahkan sehingga butr-butir tujuan harus sama banyaknya dengan butir-butir masalah. Ditulis dalam 1 paragraf.' +
   'Pada bagian ini mahasiswa menjelaskan manfaat yang bisa didapatkan jika tujuan dari penelitian tercapai. Manfaat yang disampaikan harus relevan dengan tujuan penelitian. Manfaat penelitian merupakan akibat yang timbul dari tercapainya tujuan penelitian (outcome). Bagian ini ditulis dalam 1 paragraf (style normal).';
 
-nlp.levenshtein = function(s1, s2) {
-  if (typeof s1 != 'string' || typeof s2 != 'string') return 'Kedua argumen harus beerupa string';
-  if (s1.length + s2.length > 30) return 'Kata yang anda masukkan terlalu panjang';
-  s1 = s1.toLowerCase();
-  s2 = s2.toLowerCase();
-
-  if (!s1.length || s1.indexOf(s2) >= 0) return s2.length;
-  if (!s2.length || s2.indexOf(s1) >= 0) return s1.length;
-
-  return Math.min(
-    nlp.levenshtein(s1.substr(1), s2) + 1,
-    nlp.levenshtein(s2.substr(1), s1) + 1,
-    nlp.levenshtein(s1.substr(1), s2.substr(1)) + (s1[0] !== s2[0] ? 1 : 0)
-  );
-}
-
 nlp.fastLevenshtein = function(s1, s2) {
   //if(typeof s1 != 'string' || typeof s2!= 'string') return 'Kedua argumen harus beerupa string';
   //if(s1.length + s2.length >20) return 'Kata yang anda masukkan terlalu panjang';
@@ -78,37 +62,86 @@ nlp.fastLevenshtein = function(s1, s2) {
 }
 
 nlp.cosinus = function(s1, s2) {
-  var stopword = ['di', 'ke', 'yang', 'pada', 'oleh'];
-  var output = 0;
+  var output = 0, arr = [], arrLen;
   s1 = s1.toLowerCase().replace(/[^a-z0-9 ]/, '');
   s2 = s2.toLowerCase().replace(/[^a-z0-9 ]/, '');
-  $.each(s1.split(' '), function(i, v) {
-    if (s2.indexOf(v.toLowerCase()) > -1 && stopword.indexOf(v.toLowerCase()) < 0) {
+  arr = s1.split(' ');
+  arrLen = arr.length;
+  for(i=0; i < arrLen; i++){
+    if (s2.indexOf(arr[i].toLowerCase()) > -1 && nlp.stopWords.indexOf(arr[i].toLowerCase()) < 0) {
       output++;
     }
-  })
+  }
+  if(s1 == '' || s2 == ''){
+    return 0;
+  }
   return output / Math.sqrt(s1.split(' ').length * s2.split(' ').length);
 }
 
-nlp.suggest = function(word, reference) {
-  var score = word.length;
-  var result;
-  $.each(reference, function(i, v) {
-    var check = nlp.levenshtein(word, v);
-    if (check < score) {
-      score = check;
-      result = v.toLowerCase();
+nlp.suggest = function(word) {
+  if(nlp.words.indexOf(word)>=0){
+    return word;
+  }
+  var dicLen = nlp.words.length;
+  var scoreMin = word.length;
+  var wordCan = [];
+  for(i=0; i < dicLen; i++){
+    var distance = nlp.fastLevenshtein(word, nlp.words[i]);
+    if(distance < scoreMin){
+      scoreMin = distance;
+      wordCan = [];
+      wordCan.push(nlp.words[i])
+    }else if(distance == scoreMin){
+      wordCan.push(nlp.words[i])
     }
-  })
-  return result;
+  }
+  return wordCan.join(', ');
 }
 
 nlp.summary = function(text, number) {
   text = text.replace(/[.?!]/gi, '|');
   var sentences = text.split('|');
+  var stLen = sentences.length;
   var score = [];
   var scoreRank = [];
-  $.each(sentences, function(i, v) {
+  for(i=0; i< 3; i++){
+    var s = 0;
+    if(sentences[i] != ''){
+      if(sentences[i].split(' ').length > 0){
+        for(j=0; j < 3; j++){
+          if(j != i){
+            if(sentences[j] != ''){
+              if(sentences[j].split(' ').length > 0){
+                //console.log(i+'-'+j)
+                //s += nlp.cosinus(sentences[i], sentences[j])
+                //nlp.cosinus(sentences[i], sentences[j]);
+                s += 1;
+              }
+            }
+          }
+        }
+      }
+    }
+    //console.log(i+' '+s)
+    score.push(s)
+    //if(sentences[i].split(' ').length > 3){
+      //for(j=0;j < stLen; j++){
+        //if(j != i){
+          //console.log(sentences[i])
+          //console.log(sentences[j])
+          //console.log(i+'-'+j)
+          //console.log(nlp.cosinus(sentences[i], sentences[j]))
+          //s+= nlp.cosinus(sentences[i], sentences[j]);
+        //}
+      //}
+      //score.push(s);
+      //scoreRank.push(s)
+      //console.log(i)
+    //}
+  }
+  console.log(score)
+    
+/*  $.each(sentences, function(i, v) {
     if (v.split(' ').length > 3) {
       var s = 0;
       for (j = 0; j < sentences.length; j++) {
@@ -119,97 +152,120 @@ nlp.summary = function(text, number) {
       score.push(s);
       scoreRank.push(s)
     }
-  })
-  var result = '';
-  var candidate = scoreRank.sort().reverse().splice(0, !number ? 3 : number);
-  $.each(score, function(i, v) {
+  })*/
+  //var result = '';
+  //var candidate = scoreRank.sort().reverse().splice(0, !number ? 3 : number);
+  /*$.each(score, function(i, v) {
     if (candidate.indexOf(v) > -1) {
       result += sentences[i] + '. ';
     }
-  })
-  return result;
+  })*/
+  //console.log(scoreRank);
+  //return result;
 }
 
-nlp.include = function(file, callback, obj){
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', file);
-  xhr.onload = function() {
-    if (xhr.status === 200) {
-        console.log('User\'s name is ' + xhr.responseText);
-    }
-    else {
-        console.log('Request failed.  Returned status of ' + xhr.status);
-    }
-  };
-  xhr.send();
-  /*nlp.script = this.createElement('script');
-  nlp.script.src = file;
-  scriptTag.onload = implementationCode;
-  scriptTag.onreadystatechange = implementationCode;
-  this.appendChild(scriptTag);*/
-}
-
-nlp.inDict = function(t, out){
-  if(t==false){
+nlp.inDict = function(txt, out){
+  if(txt==false){
     return false;
   }
-  if(nlp.word.indexOf(t) > -1){
-    out.push(t);
+  if(nlp.words.indexOf(txt) > -1){
+    out.push(txt);
     return true;
   }
   return false;
 }
 
-nlp.match = function(txt, pattern, st){
-  var arr = txt.match(pattern);
-  if(arr == null){
-    return false;
+nlp.match = function(txt, pattern, repl){ 
+  var p = '^';
+  //memeeriksa awalan
+  if(typeof pattern[0] == 'string'){
+    p += '('+pattern[0]+')';
   }
-  if(st==2){
-    return txt.substr(arr[1].length, txt.length - arr[1].length - arr[2].length);
+  //memeriksa sisipan
+  if(typeof pattern[1] == 'string'){
+    p += '.*?('+pattern[1]+')';
   }
-  if(st == 1){
-    return txt.substr(0, txt.length - arr[1].length);
+  //memeriksa akhiran
+  if(typeof pattern[2] == 'string'){
+    p += '.*?('+pattern[2]+')';
   }
-  return txt.substr(arr[1].length, txt.length - arr[1].length);
+  p += '$';
+  //mencari pola
+  var arr = txt.match(new RegExp(p));
+  if(arr != null){
+    //menghapus awalan
+    txt = txt.substr(arr[1].length, txt.length-arr[1].length);
+    //menghapus sisipan
+    txt = txt.substr(0, txt.indexOf(arr[2]))+txt.substr(txt.indexOf(arr[2])+arr[2].length, txt.length-txt.indexOf(arr[2])-arr[2].length);
+    //menghapus akhiran
+    txt = txt.substr(0, txt.length-arr[3].length);
+    if(typeof repl == 'string'){
+      //menambahkan konsonan pengganti
+      return repl + txt; 
+    }
+    return txt;
+  }
+  return false;
 }
 
-nlp.test = function() {
-  var s1 = 'mempertemukan memperbarui memakan mengesampingkan  diperbarui mempekerjakan dalam pencarian pertemuan bersamaan sipunten hatikupun yang sulit bagaimanapun juga itu adalah pencarian yang sulit';
-  var start = new Date().getTime();
-  var w = s1.split(' ');
-  var s2 = [];
+nlp.stem = function(str) {
+  var w = str.toLowerCase().split(' ');
+  var out = [];
   var basic;
   for(i=0; i<w.length; i++){
     //mencari dalam kamus, jika ketemu termasuk dalam kata dasar
-    if(! nlp.inDict(w[i], s2)){
-      //menghilangkan akhiran pun, kah, lah, ku, mu dan nya
-      basic = nlp.match(w[i], /^.*?(pun|kah|lah|ku|mu|nya)$/, 1);
-      if(basic){
-        if(! nlp.inDict(basic, s2)){
-          nlp.inDict(nlp.match(basic, /^.*?(ku|mu|nya)$/, 1), s2);
+    if(! nlp.inDict(w[i], out)){
+      //menghapus akhiran pun, kah, lah, ku, mu dan nya
+      basic = nlp.match(w[i], ['','','pun|kah|lah|ku|mu|nya']);
+      if(basic !== false){
+        if(! nlp.inDict(basic, out)){
+          //menghapus akhiran ku, mu dan nya
+          nlp.inDict(nlp.match(basic, ['','','ku|mu|nya']), out)
         }
       }
-      basic = nlp.match(w[i], /^(ber).*?$/, 0);
+      
+      //neghapus awalan ber
+      basic = nlp.match(w[i], ['ber','','']);
       if(basic){
-        if(! nlp.inDict(basic, s2)){
-          nlp.inDict(nlp.match(basic, /^.*?(an)$/, 1), s2);
+        if(! nlp.inDict(basic, out)){
+          //menghapus akhiran an
+          nlp.inDict(nlp.match(basic, ['','','an'], 1), out);
         }
       }
-      nlp.inDict(nlp.match(w[i], /^(per|ke).*?(an)$/,2), s2);
-      nlp.inDict(nlp.match(w[i], /^(memper|mempe|diper|menge).*?(kan|i)$/,2), s2);
-      nlp.inDict(nlp.match(w[i], /^(me|di).*?(kan|i)$/,2), s2);
-      t= nlp.inDict(nlp.match(w[i], /^(me|di).*?$/,0), s2);
-      console.log(t)
+
+      //menghapusn awalan per, ke dan akhira an
+      nlp.inDict(nlp.match(w[i], ['per|ke|pen','','an']), out);
+      
+      //menghapusn awalan memper, mempe, diper  dan akhiran kan, i
+      nlp.inDict(nlp.match(w[i], ['memper|mempe|diper','','kan|i']), out);
+      
+      //menghapusn awalan me, di
+      nlp.inDict(nlp.match(w[i], ['me|di','','']), out);
+      
+      //menghapusn awalan me, di  dan akhiran kan, i
+      nlp.inDict(nlp.match(w[i], ['me|di','','kan|i']), out);
+      //menghapusn awalan meng  dan mengganti dengan konsonan k
+      nlp.inDict(nlp.match(w[i], ['meng','','i|kan'], 'k'), out);
+      //menghapusn awalan meny  dan mengganti dengan konsonan s
+      nlp.inDict(nlp.match(w[i], ['meny','el','i|kan'], 's'), out);
     }
+    
   }
-  console.log(s2);
-  //console.log(pat1.test('bagaimanapun'))
-  //console.log(words);
-  //console.log('output: '+nlp.fastLevenshtein(s1,s2))
-  //console.log('Execution time: '+(new Date().getTime() - start));
+  return out.join(' ');  
 }
 
-nlp.word = require('./words.js');
-//nlp.include('words.js', 'nlp.test', nlp);
-nlp.test();
+nlp.words = require('./words.js');
+nlp.stopWords = require('./stopWords.js');
+var s = 'mempertemukan memperbarui menyelisihi mengelabui memakan mengesampingkan  diperbarui mempekerjakan dalam pencarian pertemuan bersamaan hatikupun yang sulit bagaimanapun juga itu adalah pencarian yang sulit';
+console.log('kalimat asli')
+console.log(s);
+console.log('hasil stemming')
+console.log(nlp.stem(s));
+console.log('Mencari indek kmiripan');
+var t = 'ketika itu juga pencarian menjadi sulit';
+var u = 'pencarian jati diri juga sangat penting';
+console.log('antara ['+t+'] dengan ['+u+']')
+console.log(nlp.cosinus(t, u))
+var t = 'saiya';
+console.log('Saran koreksi kata ['+t+']')
+console.log('Saran kata untuk '+t+' adalah '+nlp.suggest(t))
