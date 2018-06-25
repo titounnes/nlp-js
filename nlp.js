@@ -61,23 +61,6 @@ nlp.fastLevenshtein = function(s1, s2) {
   return nextCol;
 }
 
-nlp.cosinus = function(s1, s2) {
-  var output = 0, arr = [], arrLen;
-  s1 = s1.toLowerCase().replace(/[^a-z0-9 ]/, '');
-  s2 = s2.toLowerCase().replace(/[^a-z0-9 ]/, '');
-  arr = s1.split(' ');
-  arrLen = arr.length;
-  for(i=0; i < arrLen; i++){
-    if (s2.indexOf(arr[i].toLowerCase()) > -1 && nlp.stopWords.indexOf(arr[i].toLowerCase()) < 0) {
-      output++;
-    }
-  }
-  if(s1 == '' || s2 == ''){
-    return 0;
-  }
-  return output / Math.sqrt(s1.split(' ').length * s2.split(' ').length);
-}
-
 nlp.suggest = function(word) {
   if(nlp.words.indexOf(word)>=0){
     return word;
@@ -98,30 +81,60 @@ nlp.suggest = function(word) {
   return wordCan.join(', ');
 }
 
+nlp.cosinus = function(s1, s2) {
+  var output = 0, arr = [], arrLen;
+  if(typeof s1 == 'undefined'){
+    return 0;
+  }
+  if(s1 == ''){
+    return 0;
+  }
+  console.log(s1)
+  s1 = s1.toLowerCase().replace(/[^a-z0-9 ]/, '');
+  s2 = s2.toLowerCase().replace(/[^a-z0-9 ]/, '');
+  arr = s1.split(' ');
+  arrLen = arr.length;
+  for(i=0; i < 10; i++){
+    /*if (s2.indexOf(arr[i].toLowerCase()) > -1 && nlp.stopWords.indexOf(arr[i].toLowerCase()) < 0) {
+      output++;
+    }*/
+  }
+  return 1;
+  return output / Math.sqrt(s1.split(' ').length * s2.split(' ').length);
+}
+
 nlp.summary = function(text, number) {
   text = text.replace(/[.?!]/gi, '|');
   var sentences = text.split('|');
-  var stLen = sentences.length;
-  var score = [];
-  var scoreRank = [];
-  for(i=0; i< 3; i++){
-    var s = 0;
-    if(sentences[i] != ''){
-      if(sentences[i].split(' ').length > 0){
-        for(j=0; j < 3; j++){
-          if(j != i){
-            if(sentences[j] != ''){
-              if(sentences[j].split(' ').length > 0){
-                //console.log(i+'-'+j)
-                //s += nlp.cosinus(sentences[i], sentences[j])
-                //nlp.cosinus(sentences[i], sentences[j]);
-                s += 1;
-              }
-            }
-          }
-        }
+  text = '';
+  var stc = {};
+  var stLen = 0;
+  for(i=0; i< sentences.length; i++){
+    if(sentences[i] != '')
+    {
+      if(sentences[i].split(' ').length > 3)
+      { 
+        stc[stLen] = sentences[i];
+        stLen ++;
       }
     }
+  }
+  sentences = '';
+  
+  var score = [];
+  var scoreRank = [];
+  for(i=0; i < stLen; i++){
+    var s = 0;
+    for(j=0; j < stLen; j++){
+      if(j != i){
+        //console.log(i+'-'+j)
+
+        s += nlp.cosinus(stc[i], stc[j])
+        //console.log(nlp.cosinus(sentences[i], sentences[j]));
+        //s += 1;
+      }
+    }
+  
     //console.log(i+' '+s)
     score.push(s)
     //if(sentences[i].split(' ').length > 3){
@@ -139,7 +152,7 @@ nlp.summary = function(text, number) {
       //console.log(i)
     //}
   }
-  console.log(score)
+  //console.log(score)
     
 /*  $.each(sentences, function(i, v) {
     if (v.split(' ').length > 3) {
@@ -164,18 +177,45 @@ nlp.summary = function(text, number) {
   //return result;
 }
 
-nlp.inDict = function(txt, out){
+nlp.inDict = function(txt, oriTxt){
   if(txt==false){
     return false;
   }
   if(nlp.words.indexOf(txt) > -1){
-    out.push(txt);
+    var w = {};
+    w.o = oriTxt;
+    w.s = txt; 
+    nlp.stemmed.push(w);
     return true;
   }
   return false;
 }
 
-nlp.match = function(txt, pattern, repl){ 
+nlp.passStem = function(word, patt){
+  var basic = false;
+  var oriTxt = word;
+  word = nlp.match(word, patt[0]);
+  if(word){
+    basic = nlp.inDict(word, oriTxt);
+    if(! basic && typeof patt[1] == 'object'){
+      word = nlp.match(word, patt[1]);
+      if(word){
+        basic = nlp.inDict(word, oriTxt);
+        if(! basic && typeof patt[2] == 'object'){
+          word = nlp.match(word, patt[2]);
+          if(word){
+            basic = nlp.inDict(word, oriTxt);
+            /*if(! basic && typeof patt[3] == 'object'){
+              word = nlp.match(word, patt[3]);
+            }*/
+          }
+        }
+      }
+    }
+  }
+  return basic;
+}
+nlp.match = function(txt, pattern){ 
   var p = '^';
   //memeeriksa awalan
   if(typeof pattern[0] == 'string'){
@@ -193,162 +233,60 @@ nlp.match = function(txt, pattern, repl){
   //mencari pola
   var arr = txt.match(new RegExp(p));
   if(arr != null){
-    //menghapus awalan
-    txt = txt.substr(arr[1].length, txt.length-arr[1].length);
     //menghapus sisipan
     txt = txt.substr(0, txt.indexOf(arr[2]))+txt.substr(txt.indexOf(arr[2])+arr[2].length, txt.length-txt.indexOf(arr[2])-arr[2].length);
     //menghapus akhiran
     txt = txt.substr(0, txt.length-arr[3].length);
-    if(typeof repl == 'string'){
-      //menambahkan konsonan pengganti
-      return repl + txt; 
+
+    var repl = "";
+    if(typeof pattern[3] == 'string'){
+      var replacement = pattern[3].split('|');
+      var need = pattern[0].split('|');
+      if(typeof replacement[need.indexOf(arr[1])] != 'undefined'){
+        repl = replacement[need.indexOf(arr[1])];
+      }
     }
+    //menghapus awalan
+    txt = repl + txt.substr(arr[1].length, txt.length-arr[1].length);
+        
     return txt;
   }
   return false;
 }
 
 nlp.stem = function(str) {
-  var w = str.toLowerCase().split(' ');
-  var out = [];
   var basic;
-  for(i=0; i<w.length; i++){
-    //mencari dalam kamus, jika ketemu termasuk dalam kata dasar
-    basic = nlp.inDict(w[i], out);
-
-    if(basic == false){
-      //menghapus akhiran pun, kah, lah, ku, mu dan nya
-      basic = nlp.match(w[i], ['','','pun|kah|lah|ku|mu|nya']);
-      if(basic !== false){
-        if(nlp.inDict(basic, out) === false){
-          //menghapus akhiran ku, mu dan nya
-          basic = nlp.match(basic, ['','','ku|mu|nya']);
-          if(basic !== false){
-            nlp.inDict(basic, out)
-          }
+  
+  str.toLowerCase().replace(/\s\s+/g, ' ').split(' ').forEach(function(word, key){
+    basic = nlp.inDict(word, word);
+    if(! basic){
+      nlp.patterns.forEach(function(pattern, i){
+        basic = nlp.passStem(word, pattern);
+      })
+      if(! basic){
+        if(typeof nlp.stemmed[key] == 'undefined' && word != ''){
+          var out = {};
+          out.o = word;
+          out.s = "*"+word+"*";
+          nlp.stemmed.push(out);
         }
-      }
-
-      if(basic === false){
-        basic = nlp.match(w[i], ['memper|diper','','']);
-        //neghapus awalan ber
-        if(basic !== false){
-          if(nlp.inDict(basic, out) === false){
-            //menghapus akhiran an
-            basic = nlp.match(basic, ['','','kan|i']);
-            if(basic !== false){
-              if(nlp.inDict(basic, out) === false){
-                basic = nlp.match(basic, ['','el|er','']);
-              }
-            }
-          }
-        }
-      }
-
-      if(basic === false){
-        //neghapus awalan ber
-        basic = nlp.match(w[i], ['ber|me|di|pen|per','','']);
-        if(basic !== false){
-          if(nlp.inDict(basic, out) === false){
-            //menghapus akhiran an
-            basic = nlp.match(basic, ['','','an|kan|i']);
-            if(basic !== false){
-              if(nlp.inDict(basic, out) === false){
-                basic = nlp.match(basic, ['','el|er','']);
-                if(basic !== false){
-                  basic = nlp.inDict(basic, out);
-                }
-              }
-            }
-          }
-        }
-      }
-      
-      if(basic === false){
-        //neghapus awalan ber
-        basic = nlp.match(w[i], ['pe','','']);
-        if(basic !== false){
-          if(nlp.inDict(basic, out) === false){
-            //menghapus akhiran an
-            basic = nlp.match(basic, ['','','an|kan|i']);
-            if(basic !== false){
-              if(nlp.inDict(basic, out) === false){
-                basic = nlp.match(basic, ['','el|er','']);
-                if(basic !== false){
-                  basic = nlp.inDict(basic, out);
-                }
-              }
-            }
-          }
-        }
-      }
-
-
-      if(basic === false){
-        basic = nlp.match(w[i], ['menge|mempe','','']);
-        //neghapus awalan ber
-        if(basic !== false){
-          if(nlp.inDict(basic, out) === false){
-            //menghapus akhiran an
-            basic = nlp.match(basic, ['','','kan']);
-            if(basic !== false){
-              if(nlp.inDict(basic, out) === false){
-                basic = nlp.match(basic, ['','el|er','']);
-              }
-            }
-          }
-        }
-      }
-
-      if(basic === false){
-        basic = nlp.match(w[i], ['meng','',''],'k');
-        //neghapus awalan ber
-        if(basic !== false){
-          if(nlp.inDict(basic, out) === false){
-            //menghapus akhiran an
-            basic = nlp.match(basic, ['','','kan|i']);
-            if(basic !== false){
-              if(nlp.inDict(basic, out) === false){
-                basic = nlp.match(basic, ['','el|er','']);
-              }
-            }
-          }
-        }
-      }
-
-      if(basic === false){
-        basic = nlp.match(w[i], ['meny','',''],'s');
-        //neghapus awalan ber
-        if(basic !== false){
-          if(nlp.inDict(basic, out) === false){
-            //menghapus akhiran an
-            basic = nlp.match(basic, ['','','kan|i']);
-            if(basic !== false){
-              if(nlp.inDict(basic, out) === false){
-                basic = nlp.match(basic, ['','el|er','']);
-              }
-            }
-          }
-        }
-      }
-
-      if(basic === false){
-        //diasumsikan kosa kata baru
-        out.push(w[i])
       }
     }
-    
-  }
-  return out.join(' ');  
+  })
+  return nlp.stemmed;
 }
 
 nlp.words = require('./words.js');
+nlp.stemmed = [];
 nlp.stopWords = require('./stopWords.js');
+nlp.patterns = require('./pattern.js');
 var s = 'mempertemukan memperbarui makron menyelisihi mengelabui memakan mengesampingkan  diperbarui mempekerjakan dalam pencarian pertemuan bersamaan hatikupun yang sulit bagaimanapun juga itu adalah pencarian yang sulit';
 console.log('kalimat asli')
 console.log(s);
 console.log('hasil stemming')
-console.log(nlp.stem(s));
+nlp.stem(s).forEach(function(v){
+  console.log(v.o+' => '+ v.s);
+})
 console.log('Mencari indek kmiripan');
 var t = 'ketika itu juga pencarian menjadi sulit';
 var u = 'pencarian jati diri juga sangat penting';
