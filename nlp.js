@@ -5,8 +5,7 @@ nlp.text = 'Pada bagian ini mahasiswa diminta untuk memaparkan latar belakang me
   'Pada bagian ini mahasiswa menjelaskan manfaat yang bisa didapatkan jika tujuan dari penelitian tercapai. Manfaat yang disampaikan harus relevan dengan tujuan penelitian. Manfaat penelitian merupakan akibat yang timbul dari tercapainya tujuan penelitian (outcome). Bagian ini ditulis dalam 1 paragraf (style normal).';
 
 nlp.fastLevenshtein = function(s1, s2) {
-  //if(typeof s1 != 'string' || typeof s2!= 'string') return 'Kedua argumen harus beerupa string';
-  //if(s1.length + s2.length >20) return 'Kata yang anda masukkan terlalu panjang';
+
   s1 = s1.toLowerCase();
   s2 = s2.toLowerCase();
 
@@ -20,44 +19,35 @@ nlp.fastLevenshtein = function(s1, s2) {
     str2char = [];
 
   // initialise previous row
-  for (i = 0; i < s2l; ++i) {
+  s2.split('').forEach(function(v, i){
     prevRow.push(i);
-    str2char.push(s2[i]);
-  }
+    str2char.push(v);
+  })
   prevRow[s2l] = s2l;
-  for (i = 0; i < s1l; ++i) {
+
+  s1.split('').forEach(function(v, i){
+
     nextCol = i + 1;
-
-    for (j = 0; j < s2l; ++j) {
+    s2.split('').forEach(function(w, j){
       curCol = nextCol;
-
-      var comp = true;
-      if(str2char[j]){
-        comp = s1[i] === str2char[j];
-      }
-
       // substution
-      nextCol = prevRow[j] + (comp ? 0 : 1);
-
+      nextCol = prevRow[j] + (str2char[j] && v === str2char[j] ? 0 : 1);
       // insertion
-      tmp = curCol + 1;
-      if (nextCol > tmp) {
-        nextCol = tmp;
+      if(nextCol > curCol + 1){
+          nextcol = curCol +1;
       }
       // deletion
-      tmp = prevRow[j + 1] + 1;
-      if (nextCol > tmp) {
-        nextCol = tmp;
+      if(nextCol > prevRow[j+1] + 1){
+        nextCol = prevRow[j+1] + 1;
       }
-
       // copy current col value into previous (in preparation for next iteration)
       prevRow[j] = curCol;
-    }
+    })
 
     // copy last col value into previous (in preparation for next iteration)
     prevRow[j] = nextCol;
 
-  }
+  })
   return nextCol;
 }
 
@@ -89,18 +79,17 @@ nlp.cosinus = function(s1, s2) {
   if(s1 == ''){
     return 0;
   }
-  console.log(s1)
-  s1 = s1.toLowerCase().replace(/[^a-z0-9 ]/, '');
-  s2 = s2.toLowerCase().replace(/[^a-z0-9 ]/, '');
+  s1 = s1.toLowerCase().replace(/[^a-z ]/, '');
+  s2 = s2.toLowerCase().replace(/[^a-z ]/, '');
+
   arr = s1.split(' ');
-  arrLen = arr.length;
-  for(i=0; i < 10; i++){
-    /*if (s2.indexOf(arr[i].toLowerCase()) > -1 && nlp.stopWords.indexOf(arr[i].toLowerCase()) < 0) {
+  arr.forEach(function(v,i){
+    if (arr[i] != ' ' && s2.indexOf(arr[i]) > -1 && nlp.stopWords.indexOf(arr[i]) < 0) {
       output++;
-    }*/
-  }
-  return 1;
-  return output / Math.sqrt(s1.split(' ').length * s2.split(' ').length);
+    }
+  });
+
+  return output / Math.sqrt(arr.length * s2.split(' ').length);
 }
 
 nlp.summary = function(text, number) {
@@ -111,16 +100,16 @@ nlp.summary = function(text, number) {
   var stLen = 0;
   for(i=0; i< sentences.length; i++){
     if(sentences[i] != '')
-    {
+    {s1.split()
       if(sentences[i].split(' ').length > 3)
-      { 
+      {
         stc[stLen] = sentences[i];
         stLen ++;
       }
     }
   }
   sentences = '';
-  
+
   var score = [];
   var scoreRank = [];
   for(i=0; i < stLen; i++){
@@ -134,7 +123,7 @@ nlp.summary = function(text, number) {
         //s += 1;
       }
     }
-  
+
     //console.log(i+' '+s)
     score.push(s)
     //if(sentences[i].split(' ').length > 3){
@@ -153,7 +142,7 @@ nlp.summary = function(text, number) {
     //}
   }
   //console.log(score)
-    
+
 /*  $.each(sentences, function(i, v) {
     if (v.split(' ').length > 3) {
       var s = 0;
@@ -184,7 +173,7 @@ nlp.inDict = function(txt, oriTxt){
   if(nlp.words.indexOf(txt) > -1){
     var w = {};
     w.o = oriTxt;
-    w.s = txt; 
+    w.s = txt;
     nlp.stemmed.push(w);
     return true;
   }
@@ -205,9 +194,9 @@ nlp.passStem = function(word, patt){
           word = nlp.match(word, patt[2]);
           if(word){
             basic = nlp.inDict(word, oriTxt);
-            /*if(! basic && typeof patt[3] == 'object'){
+              if(! basic && typeof patt[3] == 'object'){
               word = nlp.match(word, patt[3]);
-            }*/
+            }
           }
         }
       }
@@ -215,7 +204,7 @@ nlp.passStem = function(word, patt){
   }
   return basic;
 }
-nlp.match = function(txt, pattern){ 
+nlp.match = function(txt, pattern){
   var p = '^';
   //memeeriksa awalan
   if(typeof pattern[0] == 'string'){
@@ -248,7 +237,7 @@ nlp.match = function(txt, pattern){
     }
     //menghapus awalan
     txt = repl + txt.substr(arr[1].length, txt.length-arr[1].length);
-        
+
     return txt;
   }
   return false;
@@ -256,7 +245,7 @@ nlp.match = function(txt, pattern){
 
 nlp.stem = function(str) {
   var basic;
-  
+
   str.toLowerCase().replace(/\s\s+/g, ' ').split(' ').forEach(function(word, key){
     basic = nlp.inDict(word, word);
     if(! basic){
@@ -294,4 +283,4 @@ console.log('antara ['+t+'] dengan ['+u+']')
 console.log(nlp.cosinus(t, u))
 var t = 'saiya';
 console.log('Saran koreksi kata ['+t+']')
-console.log('Saran kata untuk '+t+' adalah '+nlp.suggest(t))
+console.log('Saran kata untuk '+t+' adalah '+nlp.suggest(t));
